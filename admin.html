@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>问卷后台</title>
+<style>
+  :root { --brand:#16a34a; --bg:#f5f7fb; --card:#fff; --line:#e8ecf3; --text:#1f2533; --sub:#6b7280; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:20px 16px 60px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-top:14px; }
+  h2 { font-size:18px; margin:0 0 14px; }
+  .btn { background:var(--brand); color:#fff; border:none; border-radius:12px; padding:12px 16px; font-size:15px; font-weight:600; cursor:pointer; display:inline-block; text-align:center; }
+  .btn.ghost { background:#fff; color:var(--brand); border:1px solid var(--brand); }
+  .btn:active { opacity:.85; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .stat { display:flex; gap:18px; flex-wrap:wrap; }
+  .stat .b { font-size:26px; font-weight:800; color:var(--brand); }
+  .stat .l { font-size:13px; color:var(--sub); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--sub); font-weight:600; }
+  .pill { display:inline-block; background:#f0fdf4; color:var(--brand); border-radius:999px; padding:3px 10px; font-size:12px; }
+  .hidden { display:none !important; }
+  .view-btn { color:#2f6df6; cursor:pointer; white-space:nowrap; font-weight:600; }
+
+  /* 解析卡片视图 */
+  #cardView { min-height:100vh; background:#eef1f6; }
+  #theCard {
+    max-width:480px; margin:0 auto; background:#fff; border-radius:18px;
+    overflow:hidden; box-shadow:0 6px 30px rgba(0,0,0,.08);
+  }
+  #theCard .head {
+    background:linear-gradient(135deg,#0ea5a4,#2f6df6); color:#fff;
+    padding:26px 22px; text-align:center;
+  }
+  #theCard .head h1 { font-size:20px; font-weight:700; margin:0; }
+  #theCard .head .sub { margin-top:8px; font-size:13px; opacity:.9; }
+  #theCard .head .pill-label {
+    display:inline-block; margin-top:14px; background:rgba(255,255,255,.2);
+    border:1px solid rgba(255,255,255,.5); border-radius:999px;
+    padding:6px 18px; font-size:16px; font-weight:700;
+  }
+  #theCard .block { padding:18px 20px; border-bottom:1px solid #f0f2f6; }
+  #theCard .block:last-of-type { border-bottom:none; }
+  #theCard .bt { font-size:15px; font-weight:700;color:#111;margin-bottom:12px;display:flex;align-items:center;gap:8px; }
+  #theCard .bt::before{content:"";width:4px;height:15px;background:#0ea5a4;border-radius:3px;}
+  #theCard .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;}
+  #theCard .profile-grid .pl{font-size:13px;color:#6b7280;}
+  #theCard .profile-grid .pv{font-size:14px;font-weight:600;color:#1f2533;}
+  #theCard .diet-score{text-align:center;margin-bottom:12px;}
+  #theCard .diet-score .num{font-size:44px;font-weight:800;line-height:1;}
+  #theCard .diet-score .cap{font-size:13px;color:#6b7280;margin-top:4px;}
+  #theCard .desc{font-size:14px;color:#374151;}
+  #theCard .sug li{font-size:14px;color:#374151;margin:6px 0 6px 18px;}
+  #theCard .foot{text-align:center;font-size:12px;color:#9ca3af;padding:14px;}
+
+  .share-btn {
+    background:linear-gradient(135deg,#0ea5a4,#2f6df6);color:#fff;border:none;
+    border-radius:14px;padding:14px 32px;font-size:17px;font-weight:700;cursor:pointer;
+    width:100%;max-width:320px;margin:16px auto;display:block;
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="listView">
+  <h2>📋 问卷后台管理</h2>
+  <div class="row" style="margin-bottom:12px;">
+    <button class="btn" id="refreshBtn">刷新数据</button>
+  </div>
+
+  <!-- 汇总 -->
+  <div class="card">
+    <div class="stat">
+      <div><div class="b" id="totalNum">0</div><div class="l">总提交数</div></div>
+      <div><div class="b" id="todayNum">0</div><div class="l">今日</div></div>
+    </div>
+  </div>
+
+  <!-- 记录列表 -->
+  <div class="card">
+    <h2>提交记录</h2>
+    <table>
+      <thead><tr><th>#</th><th>时间</th><th>姓名/画像</th><th>操作</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 卡片视图（点击记录后显示） -->
+<div id="cardView" class="hidden">
+  <div style="padding:16px;">
+    <button class="btn ghost" id="backBtn">← 返回列表</button>
+  </div>
+  <div id="theCard">
+    <div class="head"><h1 id="cTitle">营养评估解析</h1><div class="sub" id="cSub"></div><div class="pill-label" id="cLabel"></div></div>
+    <div class="block"><div class="bt">基本信息</div><div class="profile-grid" id="cProfile"></div></div>
+    <div class="block"><div class="bt">画像解读</div><div class="desc" id="cDesc"></div></div>
+    <div class="foot">本解析由 AI 营养评估生成 · 仅供参考</div>
+  </div>
+  <button class="share-btn" id="shareBtn">分享此报告</button>
+</div>
+
+<script src="./vendor/cloudbase.global.js"></script>
+<script src="./vendor/html2canvas.min.js"></script>
+<script>
+const app = cloudbase.init({ env: 'cloud1-d7g29uf838dcd730', region: 'ap-shanghai' });
+try { app.auth().signInAnonymously().catch(function(){}); } catch (e) {}
+const $ = (s) => document.querySelector(s);
+
+let allRecords = [];
+
+async function loadData() {
+  try {
+    // ★ 调用云函数 admin（替代 fetch('/api/admin/responses?key=xxx')）
+    const res = await app.callFunction({ name:'admin', data:{} });
+    const d = res.result;
+    if (!d.ok) { alert('加载失败：'+d.error); return; }
+
+    allRecords = d.items || [];
+    $('#totalNum').textContent = d.total || 0;
+
+    // 今日数量
+    const today = new Date().toISOString().slice(0,10);
+    $('#todayNum').textContent = allRecords.filter(r => r.time && r.time.startsWith(today)).length;
+
+    // 渲染表格
+    $('#tbody').innerHTML = allRecords.map((r, i) => {
+      const name = (r.answers && r.answers.name) || '匿名';
+      const label = (r.result && r.result.label) || '—';
+      const time = r.time ? new Date(r.time).toLocaleString('zh-CN') : '—';
+      return '<tr>'+
+        '<td>'+(allRecords.length-i)+'</td>'+
+        '<td>'+time+'</td>'+
+        '<td>'+name+'<br><span class="pill">'+label+'</span></td>'+
+        '<td><span class="view-btn" data-id="'+r._id+'">查看卡片</span></td>'+
+      '</tr>';
+    }).join('');
+
+    // 绑定查看按钮
+    document.querySelectorAll('.view-btn').forEach(el=>{
+      el.addEventListener('click',()=>showCard(el.dataset.id));
+    });
+  } catch(e) { alert('网络错误：'+e.message); }
+}
+
+function showCard(id) {
+  const rec = allRecords.find(r=>r._id===id);
+  if(!rec) return;
+
+  const r=rec.result||{};
+  $('#cTitle').textContent='营养评估 · 解析报告';
+  $('#cSub').textContent='提交时间：'+new Date(rec.time).toLocaleString('zh-CN');
+  $('#cLabel').textContent=r.label||'—';
+
+  const ans=rec.answers||{};
+  const items=[];
+  if(ans.name) items.push({label:'姓名',value:ans.name});
+  if(ans.gender) items.push({label:'性别',value:ans.gender});
+  if(ans.workType) items.push({label:'工作类型',value:ans.workType});
+  if(ans.breakfast) items.push({label:'早餐时间',value:ans.breakfast});
+  if(ans.bedtime) items.push({label:'就寝时间',value:ans.bedtime});
+  if(ans.supplements) items.push({label:'补充剂习惯',value:ans.supplements});
+  $('#cProfile').innerHTML=items.map(p=>
+    '<div><div class="pl">'+p.label+'</div><div class="pv">'+(p.value||'—')+'</div></div>'
+  ).join('');
+
+  $('#cDesc').textContent=r.label?('您的生活型态画像为「'+r.label+'」。'):'';
+
+  $('#listView').classList.add('hidden');
+  $('#cardView').classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+
+$('#backBtn').addEventListener('click',()=>{
+  $('#cardView').classList.add('hidden');
+  $('#listView').classList.remove('hidden');
+});
+
+$('#refreshBtn').addEventListener('click',()=>loadData());
+
+$('#shareBtn').addEventListener('click',async()=>{
+  try{
+    const canvas=await html2canvas($('#theCard'),{scale:2,backgroundColor:'#fff',useCORS:true});
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL('image/png');
+    a.download='营养评估_'+new Date().toISOString().slice(0,10)+'.png';
+    a.click();
+  }catch(e){alert('生成失败：'+e.message);}
+});
+
+// 页面加载
+loadData();
+</script>
+</body>
+</html>

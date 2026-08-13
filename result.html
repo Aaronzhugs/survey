@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>营养评估解析</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #eef1f6; color: #1f2533; padding: 16px; line-height: 1.6;
+  }
+  #card {
+    max-width: 480px; margin: 0 auto; background: #fff; border-radius: 18px;
+    overflow: hidden; box-shadow: 0 6px 30px rgba(0,0,0,.08);
+  }
+  .head {
+    background: linear-gradient(135deg, #0ea5a4, #2f6df6);
+    color: #fff; padding: 26px 22px; text-align: center;
+  }
+  .head h1 { font-size: 20px; font-weight: 700; }
+  .head .sub { margin-top: 8px; font-size: 13px; opacity: .9; }
+  .head .pill-label {
+    display: inline-block; margin-top: 14px; background: rgba(255,255,255,.2);
+    border: 1px solid rgba(255,255,255,.5); border-radius: 999px;
+    padding: 6px 18px; font-size: 16px; font-weight: 700;
+  }
+  .block { padding: 18px 20px; border-bottom: 1px solid #f0f2f6; }
+  .block:last-of-type { border-bottom: none; }
+  .bt { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px; }
+  .bt::before { content: ""; width: 4px; height: 15px; background: #0ea5a4; border-radius: 3px; }
+
+  .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+  .profile-grid .pl { font-size: 13px; color: #6b7280; }
+  .profile-grid .pv { font-size: 14px; font-weight: 600; color: #1f2533; }
+
+  .diet-score { text-align: center; margin-bottom: 12px; }
+  .diet-score .num { font-size: 44px; font-weight: 800; line-height: 1; }
+  .diet-score .cap { font-size: 13px; color: #6b7280; margin-top: 4px; }
+  .diet-defs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .diet-def-pill {
+    background: #fef2f2; color: #b91c1c; border-radius: 99px;
+    padding: 5px 12px; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .diet-def-pill .dd-n { background:#dc2626; color:#fff; border-radius:99px;
+    min-width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; }
+
+  .symptom-item { padding: 8px 0; border-bottom: 1px dashed #eee; }
+  .symptom-item:last-child { border-bottom: none; }
+  .symptom-name { font-weight: 600; font-size: 14px; }
+  .sym-nutrient-tag {
+    display:inline-block; background:#eef3ff; color:#2f6df6; border-radius:6px;
+    padding:2px 8px; font-size:12px; margin:4px 6px 0 0;
+  }
+  .nut-rank-title { font-size:13px; font-weight:700; color:#92400e; margin:14px 0 8px; }
+  .nut-row { display:flex; align-items:center; gap:10px; margin:5px 0; font-size:13px; }
+  .nut-row .nm { min-width:72px; font-weight:600; }
+  .nut-row .bar { flex:1; height:8px; background:#f3e8d8; border-radius:5px; overflow:hidden; }
+  .nut-row .bar i { display:block; height:100%; background:#f59e0b; border-radius:5px; }
+  .nut-row .ct { min-width:64px; text-align:right; color:#92400e; font-weight:600; }
+
+  .desc { font-size: 14px; color: #374151; }
+  .sug li { font-size: 14px; color: #374151; margin: 6px 0 6px 18px; }
+
+  .foot { text-align:center; font-size:12px; color:#9ca3af; padding: 14px; }
+  .foot-img { text-align:center; padding: 0 20px 16px; }
+  .foot-img img { width:110px; height:110px; border:1px solid #eee; border-radius:10px; }
+
+  #toolbar { max-width: 480px; margin: 16px auto 40px; display:flex; gap:12px; }
+  .btn {
+    flex:1; text-align:center; padding: 13px; border-radius: 12px; border:none;
+    font-size: 15px; font-weight: 600; cursor: pointer; background:#2f6df6; color:#fff;
+  }
+  .btn.ghost { background:#fff; color:#2f6df6; border:1px solid #2f6df6; }
+  .btn:disabled { opacity:.6; }
+  #loading { text-align:center; padding:60px 20px; color:#6b7280; }
+  .err { text-align:center; padding:60px 20px; color:#dc2626; }
+
+  /* 分享按钮 */
+  .share-btn {
+    background:linear-gradient(135deg,#0ea5a4,#2f6df6); color:#fff;
+    border:none; border-radius:14px; padding:14px 32px; font-size:17px;
+    font-weight:700; cursor:pointer; width:100%; max-width:320px; margin:0 auto 14px; display:block;
+  }
+  .share-actions { display:none; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .share-actions.show { display:flex; }
+  .share-actions .sbtn {
+    flex:1; min-width:140px; max-width:200px; padding:12px 16px; border-radius:12px;
+    font-size:15px; font-weight:600; cursor:pointer; text-align:center; border:none;
+  }
+  .share-actions .sbtn.fwd { background:#2f6df6; color:#fff; }
+  .share-actions .sbtn.save { background:#16a34a; color:#fff; }
+  .share-tip { font-size:13px; color:#6b7280; margin-top:10px; text-align:center; }
+</style>
+</head>
+<body>
+  <div id="loading">加载中…</div>
+  <div id="card" class="hidden">
+    <div class="head">
+      <h1 id="cTitle">营养评估解析</h1>
+      <div class="sub" id="cSub"></div>
+      <div class="pill-label" id="cLabel"></div>
+    </div>
+
+    <div class="block">
+      <div class="bt">基本信息</div>
+      <div class="profile-grid" id="cProfile"></div>
+    </div>
+
+    <div class="block">
+      <div class="bt">饮食频率评估得分</div>
+      <div class="diet-score">
+        <div class="num" id="cDietNum">0</div>
+        <div class="cap" id="cDietCap"></div>
+      </div>
+      <div class="diet-defs" id="cDietDefs"></div>
+    </div>
+
+    <div class="block">
+      <div class="bt">身体症状分析</div>
+      <div id="cSymptoms"></div>
+      <div class="nut-rank-title" id="cNutTitle" style="display:none;">营养素缺失排名（按命中症状数）</div>
+      <div id="cNutRank"></div>
+    </div>
+
+    <div class="block">
+      <div class="bt">画像解读</div>
+      <div class="desc" id="cDesc"></div>
+    </div>
+
+    <div class="block">
+      <div class="bt">个性化建议</div>
+      <ul class="sug" id="cSug"></ul>
+    </div>
+
+    <div class="foot-img" id="cQrWrap" style="display:none;">
+      <div style="font-size:12px;color:#9ca3af;margin-bottom:8px;">扫码填问卷 →</div>
+      <img id="cQr" alt="二维码" />
+    </div>
+    <div class="foot">本解析由 AI 营养评估生成 · 仅供参考</div>
+  </div>
+
+  <div id="toolbar" class="hidden">
+    <button class="share-btn" id="shareBtn">分享此报告</button>
+    <div class="share-actions" id="shareActions">
+      <button class="sbtn fwd" id="fwdBtn">📤 转发图片</button>
+      <button class="sbtn save" id="saveBtn">💾 保存到相册</button>
+    </div>
+    <div class="share-tip" id="shareTip"></div>
+  </div>
+
+  <!-- 云开发 Web SDK（本地自托管全局版） -->
+  <script src="./vendor/cloudbase.global.js"></script>
+  <!-- html2canvas 用于保存图片（本地自托管） -->
+  <script src="./vendor/html2canvas.min.js"></script>
+  <script>
+  // 初始化云开发
+  const app = cloudbase.init({ env: 'cloud1-d7g29uf838dcd730', region: 'ap-shanghai' });
+  try { app.auth().signInAnonymously().catch(function(){}); } catch (e) {}
+  const $ = (s) => document.querySelector(s);
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+
+  async function load() {
+    if (!id) { $('#loading').className='err'; $('#loading').textContent='缺少 id 参数'; return; }
+    // ★ 调用云函数 response（替代 fetch('/api/response/'+id)）
+    try {
+      const res = await app.callFunction({ name:'response', data:{ id } });
+      const d = res.result;
+      if (!d.ok) { $('#loading').className='err'; $('#loading').textContent='加载失败：'+d.error; return; }
+      render(d.record);
+      $('#loading').style.display='none';
+      $('#card').classList.remove('hidden');
+      $('#toolbar').classList.remove('hidden');
+    } catch(e) {
+      $('#loading').className='err';
+      $('#loading').textContent='网络错误：'+e.message;
+    }
+  }
+
+  // 注意：云函数 response 返回的 record 只包含基础字段（label,scores 等）
+  // 完整分析结果需要从 submit 时存入的数据中获取
+  // 这里简化渲染，只展示已有数据
+  function render(rec) {
+    const r = rec.result || {};
+    $('#cTitle').textContent = '营养评估 · 解析报告';
+    $('#cSub').textContent = '提交时间：' + new Date(rec.time).toLocaleString('zh-CN');
+    $('#cLabel').textContent = r.label || '—';
+
+    // 基本信息
+    const answers = rec.answers || {};
+    const profileItems = [];
+    if(answers.name) profileItems.push({label:'姓名',value:answers.name});
+    if(answers.gender) profileItems.push({label:'性别',value:answers.gender});
+    if(answers.workType) profileItems.push({label:'工作类型',value:answers.workType});
+    if(answers.breakfast) profileItems.push({label:'早餐时间',value:answers.breakfast});
+    if(answers.bedtime) profileItems.push({label:'就寝时间',value:answers.bedtime});
+    if(answers.supplements) profileItems.push({label:'补充剂习惯',value:answers.supplements});
+    $('#cProfile').innerHTML = profileItems.map(p=>
+      '<div><div class="pl">'+p.label+'</div><div class="pv">'+(p.value||'—')+'</div></div>'
+    ).join('');
+
+    // 饮食得分
+    const s = r.scores || {};
+    const ds = s.dietScore || 0;
+    const dsNum = $('#cDietNum'); dsNum.textContent = ds;
+    dsNum.style.color = ds >= 80 ? '#16a34a' : (ds >= 60 ? '#d97706' : '#dc2626');
+    $('#cDietCap').textContent = '满分 100';
+
+    // 解读
+    $('#cDesc').textContent = r.label ? ('您的生活型态画像为「'+r.label+'」。') : '';
+  }
+
+  let currentImgData = '';
+  $('#shareBtn').addEventListener('click', async () => {
+    const btn = $('#shareBtn');
+    btn.textContent = '生成图片中…'; btn.disabled = true;
+    try {
+      const canvas = await html2canvas($('#card'), { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      currentImgData = canvas.toDataURL('image/png');
+      $('#shareActions').classList.add('show');
+      $('#shareTip').textContent = '图片已生成，选择下方操作 ↓';
+    } catch (e) { $('#shareTip').textContent = '图片生成失败，请重试'; }
+    btn.textContent = '分享此报告'; btn.disabled = false;
+  });
+
+  $('#fwdBtn').addEventListener('click', async () => {
+    if (!currentImgData) { alert('请先生成图片'); return; }
+    try {
+      const blob = await (await fetch(currentImgData)).blob();
+      const file = new File([blob], '营养评估_' + new Date().toISOString().slice(0,10) + '.png', { type: 'image/png' });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: '营养评估报告', text: '营养评估解析报告' }); return;
+      }
+    } catch (e) {}
+    const a = document.createElement('a');
+    a.download = '营养评估_' + new Date().toISOString().slice(0,10) + '.png';
+    a.href = currentImgData; a.click();
+    $('#shareTip').textContent = '图片已保存，请在相册中选择转发';
+  });
+
+  $('#saveBtn').addEventListener('click', () => {
+    if (!currentImgData) { alert('请先生成图片'); return; }
+    const a = document.createElement('a');
+    a.download = '营养评估_' + new Date().toISOString().slice(0,10) + '.png';
+    a.href = currentImgData; a.click();
+    $('#shareTip').textContent = '图片已保存到下载目录 / 相册';
+  });
+
+  load();
+  </script>
+</body>
+</html>

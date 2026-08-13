@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>生活型态评估及营养问卷</title>
+<style>
+  :root { --brand:#16a34a; --brand2:#15803d; --bg:#f5f7fb; --card:#fff; --line:#e8ecf3; --text:#1f2533; --sub:#6b7280; --warn:#e5484d; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width:560px; margin:0 auto; padding:18px 16px 48px; }
+  .hero { background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff; border-radius:18px; padding:22px 20px; }
+  .hero h1 { margin:0 0 8px; font-size:21px; }
+  .hero p { margin:0; font-size:14px; opacity:.92; line-height:1.5; }
+
+  /* 分区标题 */
+  .section-label { font-size:12px; color:var(--sub); text-transform:uppercase; letter-spacing:1px; margin:20px 0 6px; padding-left:4px; }
+  .section-label:first-child { margin-top:0; }
+
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 16px; margin-top:10px; }
+  .q { margin-bottom:18px; }
+  .q:last-child { margin-bottom:0; }
+  .q .t { font-size:15px; font-weight:600; margin-bottom:10px; line-height:1.4; }
+  .q .t .req { color:var(--warn); margin-left:4px; }
+  .q .hint { font-size:12px; color:var(--sub); margin-top:4px; }
+
+  /* 单选/多选选项 */
+  .opt { display:block; border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; font-size:15px; cursor:pointer; transition:.15s; position:relative; }
+  .opt:active { transform:scale(.99); }
+  .opt.on { border-color:var(--brand); background:#f0fdf4; color:var(--brand); font-weight:600; }
+
+  /* freq 勾选题（每条独立是/否） */
+  .freq-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; margin-bottom:7px; cursor:pointer; transition:.15s; font-size:14px; }
+  .freq-item:active { transform:scale(.99); }
+  .freq-item.on { border-color:var(--warn); background:#fef2f2; color:var(--warn); }
+  .freq-check { width:20px; height:20px; border:2px solid var(--line); border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:.15s; }
+  .freq-item.on .freq-check { border-color:var(--warn); background:var(--warn); }
+  .freq-check::after { content:''; display:none; width:10px; height:6px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg) translate(1px,-1px); }
+  .freq-item.on .freq-check::after { display:block; }
+
+  /* 文本输入 */
+  textarea, input[type="text"] { width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 13px; font-size:15px; font-family:inherit; resize:vertical; min-height:44px; box-sizing:border-box; }
+  input[type="text"] { min-height:auto; resize:none; }
+
+  .btn { width:100%; background:var(--brand); color:#fff; border:none; border-radius:14px; padding:15px; font-size:17px; font-weight:600; margin-top:10px; cursor:pointer; }
+  .btn:disabled { opacity:.6; }
+  .err { color:var(--warn); font-size:13px; margin-top:10px; min-height:18px; }
+
+  /* ── 解析页 ── */
+  .hidden { display:none; }
+  .res-hero { background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff; border-radius:18px; padding:24px 20px; text-align:center; }
+  .res-hero .lab { font-size:24px; font-weight:800; margin:6px 0; }
+  .res-hero .sub { font-size:13px; opacity:.92; }
+  .tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .tag { background:#f0fdf4; color:var(--brand); border-radius:999px; padding:6px 12px; font-size:13px; font-weight:500; }
+  .block { margin-top:16px; }
+  .block h3 { font-size:15px; margin:0 0 8px; }
+  .block p { font-size:14px; line-height:1.7; color:#374151; margin:0; }
+  .sug { background:#fafbff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:14px; line-height:1.65; margin-bottom:9px; }
+  .def-list { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+  .def-pill { background:#fef3c7; color:#92400e; border-radius:999px; padding:5px 11px; font-size:12px; font-weight:600; }
+  .score-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+  .score-box { background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:10px; text-align:center; }
+  .score-box .v { font-size:22px; font-weight:800; color:var(--brand); }
+  .score-box .l { font-size:11px; color:var(--sub); margin-top:2px; }
+
+  /* ★ 饮食频率评估得分卡片 */
+  .diet-score-card { text-align:center; border-color:#bbf7d0; background:#fafffe; }
+  .diet-score-ring { display:inline-flex; align-items:baseline; gap:2px; margin:10px 0 4px; }
+  .diet-score-num { font-size:48px; font-weight:900; line-height:1; }
+  .diet-score-max { font-size:18px; color:var(--sub); font-weight:600; }
+  .diet-score-detail { font-size:13px; color:var(--sub); line-height:1.6; }
+  .diet-def-rank { display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin-top:12px; padding-top:12px; border-top:1px solid #e8ecf3; }
+  .diet-def-pill { display:inline-flex; align-items:center; gap:4px; background:#fef2f2; color:#dc2626; border-radius:999px; padding:5px 11px; font-size:12px; font-weight:700; }
+  .diet-def-pill .dd-n { background:#dc2626; color:#fff; border-radius:99px; min-width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; }
+
+  /* ★ 身体症状分析卡片 */
+  .symptom-card { border-color:#fef3c7; background:#fffbf5; }
+  .symptom-item { display:flex; align-items:flex-start; gap:8px; padding:9px 0; border-bottom:1px solid #f3f4f6; font-size:14px; }
+  .symptom-item:last-child { border-bottom:none; }
+  .symptom-name { font-weight:600; color:#1f2533; white-space:nowrap; min-width:90px; }
+  .symptom-nutrients { display:flex; flex-wrap:wrap; gap:4px; }
+  .sym-nutrient-tag { background:#fef3c7; color:#92400e; border-radius:6px; padding:2px 8px; font-size:12px; font-weight:600; }
+  .sym-nutrient-rank { margin-top:14px; padding-top:12px; border-top:2px dashed #fcd34d; }
+  .sym-nutrient-rank h4 { font-size:14px; margin:0 0 8px; color:#92400e; }
+  .sym-rank-row { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:13px; }
+  .sym-rank-bar { flex:1; height:10px; background:#fde68a; border-radius:5px; overflow:hidden; }
+  .sym-rank-fill { height:100%; background:#f59e0b; border-radius:5px; transition:width .4s; }
+  .sym-conclusion { margin-top:14px; padding:12px 14px; background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; font-size:14px; line-height:1.7; color:#78350f; }
+
+  /* ★ 基本信息答案卡片 */
+  .profile-card { border-color:#dbeafe; background:#f8fbff; }
+  .profile-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin-top:8px; }
+  .profile-item { display:flex; flex-direction:column; gap:2px; }
+  .profile-item .pl { font-size:11px; color:var(--sub); }
+  .profile-item .pv { font-size:14px; font-weight:600; color:#1f2533; word-break:break-all; }
+
+  .again { margin-top:22px; background:#fff; border:1px solid var(--brand); color:var(--brand); }
+  .res-actions { display:flex; gap:12px; margin-top:22px; }
+  .res-actions .btn { flex:1; }
+  #saveImgBtn { background:var(--brand); color:#fff; border:1px solid var(--brand); }
+  .foot { text-align:center; color:var(--sub); font-size:12px; margin-top:26px; }
+
+  .consent { background:#f1f6ff; border:1px solid #cfe0ff; border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+  .consent h3 { color:#1f3a7a; }
+  .consent-chk { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:#1f2533; cursor:pointer; }
+  .consent-chk input { margin-top:2px; width:16px; height:16px; flex:0 0 auto; }
+  .consent-err { color:#dc2626; font-size:12px; margin-top:8px; display:none; }
+
+  /* ★ 二维码分享卡片 */
+  .qr-card { text-align:center; margin-top:14px; }
+  .qr-card img { width:200px; height:200px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+  .qr-card .qr-tip { font-size:13px; color:var(--sub); margin-top:8px; }
+  .qr-card .qr-url { font-size:12px; color:var(--sub); margin-top:4px; word-break:break-all; padding:0 10px; }
+  .qr-dl { display:inline-block; margin-top:10px; color:var(--brand); font-size:14px; font-weight:600; text-decoration:none; border:1px solid var(--brand); border-radius:10px; padding:8px 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- 问卷视图 -->
+  <section id="surveyView">
+    <div class="hero">
+      <h1 id="title">加载中…</h1>
+      <p id="desc"></p>
+    </div>
+    <div class="card" id="formCard">
+      <!-- ★ 信息搜集授权（必须先同意） -->
+      <div class="consent" id="consentBox">
+        <h3 style="margin:0 0 8px;font-size:15px;">信息搜集授权</h3>
+        <p style="font-size:13px;color:var(--sub);line-height:1.7;margin:0 0 12px;">
+          本问卷将收集您填写的基本信息、生活作息、饮食频率与身体症状，用于生成专属营养评估，
+          并在您提交后将结果推送给问卷创建者（微信）。请确认您已了解并同意上述信息搜集用途后再开始填写。
+        </p>
+        <label class="consent-chk">
+          <input type="checkbox" id="consentChk">
+          <span>我已阅读并同意《信息搜集授权》，授权收集我所填写的内容</span>
+        </label>
+      </div>
+      <form id="form"></form>
+      <button class="btn" id="submitBtn">提交问卷</button>
+      <div class="err" id="err"></div>
+    </div>
+
+    <!-- ★ 扫码填写 / 分享问卷 -->
+    <div class="card qr-card">
+      <h3 style="margin:0 0 10px;font-size:15px;">扫码填写 / 分享问卷</h3>
+      <img id="qrImg" alt="问卷二维码" />
+      <div class="qr-tip">微信或相机扫一扫，即可打开本问卷</div>
+      <div class="qr-url" id="qrUrl"></div>
+      <a class="qr-dl" id="qrDl" download="问卷二维码.png">下载二维码</a>
+    </div>
+
+    <div class="foot">提交即生成你的专属营养画像</div>
+  </section>
+
+  <!-- 解析视图 -->
+  <section id="resultView" class="hidden">
+    <div class="res-hero">
+      <div class="sub">你的生活型态画像</div>
+      <div class="lab" id="rLabel">—</div>
+      <div class="sub" id="rSub"></div>
+    </div>
+    <div class="tags" id="rTags"></div>
+
+    <!-- ★ 基本信息答案 -->
+    <div class="card block profile-card" id="profileBlock" style="display:none;">
+      <h3>你的作答信息</h3>
+      <div class="profile-grid" id="rProfile"></div>
+    </div>
+
+    <!-- ★ 饮食频率评估得分（独立计分板块） -->
+    <div class="card block diet-score-card">
+      <h3>饮食频率评估得分</h3>
+      <div class="diet-score-ring">
+        <div class="diet-score-num" id="rDietScore">—</div>
+        <div class="diet-score-max">/ 100</div>
+      </div>
+      <div class="diet-score-detail">
+        <div>勾选 <b id="rDietChecks">0</b> 项 · 扣 <b id="rDietDeduct">0</b> 格 × 2分</div>
+        <div style="margin-top:8px;font-size:12px;color:#888;">每勾选一项，按 IAMI 计分表对应营养素列各扣 2 分</div>
+      </div>
+      <div class="diet-def-rank" id="rDietDeficits"></div>
+    </div>
+
+    <!-- ★ 身体症状分析（逐条明细 + 营养素排序 + 结论） -->
+    <div class="card block symptom-card" id="symptomBlock" style="display:none;">
+      <h3>身体症状分析</h3>
+      <div id="rSymptomList"></div>
+      <div class="sym-nutrient-rank" id="rSymNutrientRank"></div>
+      <div class="sym-conclusion" id="rSymConclusion"></div>
+    </div>
+
+    <div class="card block">
+      <h3>画像解读</h3>
+      <p id="rDesc"></p>
+    </div>
+
+    <div class="card block">
+      <h3>评估分数</h3>
+      <div class="score-grid" id="rScores"></div>
+    </div>
+
+    <div class="card block" id="defBlock" style="display:none;">
+      <h3>潜在营养缺口（按症状匹配）</h3>
+      <div class="def-list" id="rDefs"></div>
+    </div>
+
+    <div class="card block">
+      <h3>给你的改善建议</h3>
+      <div id="rSug"></div>
+    </div>
+
+    <div class="res-actions">
+      <button class="btn again" id="saveImgBtn">保存为图片</button>
+      <button class="btn again" id="againBtn">再测一次</button>
+    </div>
+    <div class="foot">解析已同步给作者 · 欢迎分享给朋友扫码测</div>
+  </section>
+
+  <!-- 提交成功视图（不展示解析） -->
+  <section id="successView" class="hidden">
+    <div class="res-hero">
+      <div class="sub">提交成功</div>
+      <div class="lab">✓</div>
+    </div>
+    <div class="card block" style="text-align:center;">
+      <h3 style="margin:0 0 10px;">感谢您的填写</h3>
+      <p style="font-size:14px;color:var(--sub);line-height:1.7;">
+        您的健康信息已成功提交。<br>评估结果将由专业顾问通过微信反馈给您，请留意微信消息。
+      </p>
+      <button class="btn again" id="againBtn2">再填一份</button>
+    </div>
+  </section>
+</div>
+
+<!-- 云开发 Web SDK（本地自托管全局版） -->
+<script src="./vendor/cloudbase.global.js"></script>
+<!-- html2canvas 用于保存图片（本地自托管） -->
+<script src="./vendor/html2canvas.min.js"></script>
+<script>
+// ══════════════════════════════════════
+// 初始化云开发
+// ══════════════════════════════════════
+const app = cloudbase.init({
+  env: 'cloud1-d7g29uf838dcd730',
+  region: 'ap-shanghai'
+});
+// 匿名登录（开启后更稳；未开启也不影响调用 admin 上下文的云函数）
+try { app.auth().signInAnonymously().catch(function(){}); } catch (e) {}
+
+let QUESTIONS = [];
+const $ = (s) => document.querySelector(s);
+
+// ══════════════════════════════════════
+// 题目定义（与云函数保持一致）
+// ══════════════════════════════════════
+QUESTIONS = [
+  { id:'name',type:'text',title:'姓名',required:false,placeholder:'选填' },
+  { id:'gender',type:'single',title:'性别',required:false,options:['男','女'] },
+  { id:'phone',type:'text',title:'电话',required:false,placeholder:'选填' },
+  { id:'height',type:'text',title:'身高(cm)',required:false,placeholder:'如：170' },
+  { id:'weight',type:'text',title:'体重(kg)',required:false,placeholder:'如：65' },
+  { id:'workType',type:'single',title:'工作类型',required:true,options:['上班族','老板/创业者','家庭主妇/夫','学生','技术人员','银发族','体力工作者'] },
+  { id:'breakfast',type:'single',title:'早餐时间',required:true,options:['6:00-7:00','7:00-8:00','8:00-9:00','9:00以后','经常没吃'] },
+  { id:'bedtime',type:'single',title:'就寝时间',required:true,options:['10:00-11:00','11:00-12:00','12:00-1:00','1:00以后','常常还没睡'] },
+  { id:'waterSource',type:'multiple',title:'饮用水来源（可多选）',required:false,options:['自来水(烧开)','桶装水','纯净水/矿泉水','饮料为主','家用净水器'] },
+  { id:'waterBrand',type:'text',title:'若选了「家用净水器」，请填写品牌类型',required:false,placeholder:'例如：RO反渗透、超滤…' },
+  { id:'supplements',type:'single',title:'是否有食用营养补充品的习惯？',required:true,options:['有，长期吃','有，偶尔吃','无','曾经吃过'] },
+  { id:'diet_2meals',type:'freq',title:'我经常每天只吃 2 餐（甚至更少）',required:false,label:'饮食不规律' },
+  { id:'diet_lowVegFruit',type:'freq',title:'我每天吃的蔬菜及水果少于 5 份',required:false,label:'蔬果摄入不足' },
+  { id:'diet_lowGrain',type:'freq',title:'我每天吃的米面等主食少于 6 份',required:false,label:'主食/纤维不足' },
+  { id:'diet_lowDairy',type:'freq',title:'我每天吃的乳制品少于 3 份',required:false,label:'钙摄入可能不足' },
+  { id:'diet_coffeeTea',type:'freq',title:'我每天喝的咖啡或茶至少 2 杯以上',required:false,label:'咖啡因摄入偏高' },
+  { id:'diet_lowProtein',type:'freq',title:'我每天吃的蛋白质类食物少于 5 份',required:false,label:'蛋白质摄入不足' },
+  { id:'diet_friedCooked',type:'freq',title:'我常吃高温油炸、长时间熬煮的食物',required:false,label:'不良烹饪习惯' },
+  { id:'diet_smoking',type:'freq',title:'我有吸烟的习惯',required:false,label:'吸烟' },
+  { id:'diet_dieting',type:'freq',title:'我经常节食或刻意减轻体重',required:false,label:'节食减肥' },
+  {
+    id:'symptoms',
+    type:'multiple',
+    title:'以下症状你有哪些？（可多选，帮助评估营养缺口）',
+    required:false,
+    options:[
+      '便秘','青春痘','口干舌燥','过敏打喷嚏','忧郁沮丧','易怒不耐烦',
+      '皮肤粗糙','白带异常','头皮屑','肌肉关节酸痛','孕吐','血糖偏高',
+      '口臭','抽烟喝酒','口角炎','疲倦','经期不顺','脸过油',
+      '胃口不好','常感冒','粉刺','口味重','记忆力减退','尿酸高/痛风',
+      '压力熬夜','失眠/睡不好','湿疹','肝炎','静脉曲张','血胆固醇高',
+      '皮肤过敏发炎','刷牙流血','黑斑','脱发分叉秃头','怀孕哺乳期','膀胱无力尿频',
+      '胀气消化不良','水肿','易腹泻','肥胖','贫血','眼睛疲劳干涩',
+      '指甲变形','高度近视','偏头痛','老花眼/白内障','经痛','手脚冰冷',
+      '抽筋','骨质疏松','常打嗝','多梦磨牙','更年期','血压偏高',
+      '血脂偏高','低头族颈痛','常吃药','脂肪肝','不易受孕','飞蚊症'
+    ]
+  }
+];
+
+function renderSurvey() {
+  $('#title').textContent = '生活型态评估及营养问卷';
+  $('#desc').textContent = '2 分钟评估你的饮食作息与身体信号，提交后获得专属营养画像与改善建议。';
+  const form = $('#form');
+  form.innerHTML = '';
+  let idx = 0;
+  const SECTIONS = {
+    'name': '基本信息',
+    'workType': '生活作息',
+    'diet_2meals': '饮食频率评估（符合你的情况请勾选）',
+    'symptoms': '身体症状清单'
+  };
+  let lastSection = '';
+
+  QUESTIONS.forEach((q) => {
+    const sec = SECTIONS[q.id] || '';
+    if (sec && sec !== lastSection) {
+      lastSection = sec;
+      const sl = document.createElement('div');
+      sl.className = 'section-label'; sl.textContent = '▎' + sec;
+      form.appendChild(sl);
+    }
+
+    const wrap = document.createElement('div'); wrap.className = 'q';
+    const t = document.createElement('div'); t.className = 't';
+    const num = q.type === 'freq' ? '' : (++idx) + '. ';
+    t.innerHTML = num + q.title + (q.required ? '<span class="req">*</span>' : '');
+    wrap.appendChild(t);
+
+    if (q.type === 'text') {
+      const inp = document.createElement(q.id==='phone'||q.id==='height'||q.id==='weight'?'input':'textarea');
+      inp.type='text'; inp.placeholder=q.placeholder||'选填'; inp.dataset.id=q.id;
+      wrap.appendChild(inp);
+    } else if (q.type === 'freq') {
+      const el=document.createElement('div'); el.className='freq-item'; el.dataset.id=q.id;
+      el.innerHTML='<div class="freq-check"></div><span>'+(q.label||q.title)+'</span>';
+      el.addEventListener('click',(e)=>{e.preventDefault();el.classList.toggle('on');});
+      wrap.appendChild(el);
+    } else {
+      if (q.id === 'waterBrand'){ wrap.style.display='none'; wrap.id='waterBrandWrap'; }
+      if (q.hint){const h=document.createElement('div');h.className='hint';h.textContent=q.hint;wrap.appendChild(h);}
+      (q.options||[]).forEach((opt)=>{
+        const el=document.createElement('label');el.className='opt';el.textContent=opt;
+        el.dataset.id=q.id;el.dataset.val=opt;el.dataset.multi=q.type==='multiple'?'1':'0';
+        el.addEventListener('click',(e)=>{
+          e.preventDefault();
+          if(el.dataset.multi==='1'){el.classList.toggle('on');}
+          else{document.querySelectorAll('.opt[data-id="'+q.id+'"]').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
+        });
+        wrap.appendChild(el);
+      });
+    }
+    form.appendChild(wrap);
+  });
+
+  // waterSource 联动 waterBrand
+  const brandWrap=document.getElementById('waterBrandWrap');
+  if(brandWrap){
+    const toggleBrand=()=>{
+      const purifierOpt=document.querySelector('.opt[data-id="waterSource"][data-val="家用净水器"]');
+      brandWrap.style.display=(purifierOpt&&purifierOpt.classList.contains('on'))?'':'none';
+    };
+    document.querySelectorAll('.opt[data-id="waterSource"]').forEach(el=>{el.addEventListener('click',()=>{setTimeout(toggleBrand,0);});});
+    toggleBrand();
+  }
+}
+
+function collect(){
+  const answers={};
+  QUESTIONS.forEach((q)=>{
+    if(q.type==='text'){
+      const el=$('#form').querySelector('[data-id="'+q.id+'"]');
+      const v=(el?el.value:'').trim();if(v)answers[q.id]=v;
+    }else if(q.type==='freq'){
+      const el=$('.freq-item[data-id="'+q.id+'"]');
+      if(el&&el.classList.contains('on'))answers[q.id]=true;
+    }else if(q.type==='multiple'){
+      const vals=[...document.querySelectorAll('.opt[data-id="'+q.id+'"][data-multi="1"].on')].map(o=>o.dataset.val);
+      if(vals.length)answers[q.id]=vals;
+    }else{
+      const on=document.querySelector('.opt[data-id="'+q.id+'"].on');
+      if(on)answers[q.id]=on.dataset.val;
+    }
+  });
+  return answers;
+}
+const form=()=>$('#form');
+
+// ══════════════════════════════════════
+// 提交（调用云函数）
+// ══════════════════════════════════════
+async function submit(){
+  const btn=$('#submitBtn'); $('#err').textContent='';
+  const consentEl=$('#consentChk');
+  if(!consentEl.checked){
+    let ce=$('#consentErr');
+    if(!ce){ce=document.createElement('div');ce.id='consentErr';ce.className='consent-err';
+      ce.textContent='请先勾选同意《信息搜集授权》后再提交';$('#consentBox').appendChild(ce);}
+    ce.style.display='block';btn.disabled=false;btn.textContent='提交问卷';
+    $('#consentBox').scrollIntoView({behavior:'smooth',block:'center'});return;
+  }
+  btn.disabled=true;btn.textContent='分析中…';
+  try{
+    const answers=collect();
+    // ★ 调用云函数 submit（替代原来的 fetch('/api/submit')）
+    const res=await app.callFunction({name:'submit',data:{answers,consent:true}});
+    const data=res.result;
+    if(!data.ok){$('#err').textContent=data.error||'提交失败';btn.disabled=false;btn.textContent='提交问卷';return;}
+    showSuccess();
+  }catch(e){$('#err').textContent='网络错误：'+e.message;btn.disabled=false;btn.textContent='提交问卷';}
+}
+
+function showSuccess(){
+  $('#surveyView').classList.add('hidden');$('#resultView').classList.add('hidden');
+  $('#successView').classList.remove('hidden');window.scrollTo(0,0);
+}
+
+function showResult(a){
+  $('#surveyView').classList.add('hidden');$('#resultView').classList.remove('hidden');
+  $('#rLabel').textContent=a.label;
+  const s=a.scores||{};
+  $('#rSub').textContent=
+    '饮食得分 '+(s.dietScore||0)+'/100 · 睡眠 '+(['差','较差','一般','良好'][s.sleepScore-1]||'—')+
+    ' · 症状 '+(s.symptomCount||0)+' 项';
+
+  $('#rDesc').textContent=a.desc;
+  $('#rTags').innerHTML=(a.tags||[]).map(t=>'<span class="tag">'+t+'</span>').join('');
+
+  const prof=a.profile||[];
+  if(prof.length){$('#profileBlock').style.display='';
+    $('#rProfile').innerHTML=prof.map(p=>'<div class="profile-item"><span class="pl">'+p.label+'</span><span class="pv">'+p.value+'</span></div>').join('');
+  }else{$('#profileBlock').style.display='none';}
+
+  const ds=s.dietScore||0;const dsNum=$('#rDietScore');dsNum.textContent=ds;
+  if(ds>=80){dsNum.style.color='#16a34a';}else if(ds>=60){dsNum.style.color='#d97706';}else{dsNum.style.color='#dc2626';}
+  $('#rDietChecks').textContent=s.dietTotalChecks?(a.checkedDiets||[]).length:0;
+  $('#rDietDeduct').textContent=s.dietTotalChecks||0;
+
+  const dd=a.dietDeficits||[];
+  if(dd.length){$('#rDietDeficits').innerHTML=dd.map(([name,count])=>
+    '<span class="diet-def-pill">'+name+'<span class="dd-n">-'+(count*2)+'</span></span>').join('');
+  }else{$('#rDietDeficits').innerHTML='<span style="font-size:13px;color:#16a34a;">✓ 饮食习惯很好，无明显扣分</span>';}
+
+  const sd=a.symptomDetails||[];
+  if(sd.length){$('#symptomBlock').style.display='';
+    $('#rSymptomList').innerHTML=sd.map(item=>
+      '<div class="symptom-item"><span class="symptom-name">'+item.symptom+'</span>'+
+      '<span class="symptom-nutrients">'+(item.nutrients.length?item.nutrients.map(n=>
+        '<span class="sym-nutrient-tag">'+n+'</span>').join(''):'<span style="color:#9ca3af;font-size:12px;">暂无对应映射</span>')+
+      '</span></div>').join('');
+    const defs=a.deficiencies||[];const maxCount=defs.length?defs[0].count:1;
+    if(defs.length){$('#rSymNutrientRank').innerHTML=
+      '<h4>营养素缺失排名（按症状匹配频次）</h4>'+defs.map(([name,count])=>
+        '<div class="sym-rank-row"><span style="font-weight:600;min-width:80px;">'+name+'</span>'+
+        '<span class="sym-rank-bar"><i class="sym-rank-fill" style="width:'+Math.round(count/maxCount*100)+'%"></i></span>'+
+        '<span style="color:#92400e;font-weight:600;min-width:36px;text-align:right;">'+count+'项</span></div>'
+      ).join('');
+      const top3=defs.slice(0,3).map(([n])=>n);
+      let conclusion='根据你选择的 '+sd.length+' 项症状分析，';
+      if(sd.length>=10){conclusion+='你的身体发出了较多信号。';}
+      else if(sd.length>=5){conclusion+='身体有多个方面需要关注。';}
+      else{conclusion+='身体有一些轻微信号。'}
+      conclusion+='最需要补充的营养素依次是：<b>'+top3.join('、')+'</b>。';
+      if(top3.includes('B族')){conclusion+='B族维生素是"万能补"，参与能量代谢和神经系统功能。';}
+      if(top3.includes('蛋白质')){conclusion+='蛋白质是身体修复的基础原料。';}
+      if(top3.includes('钙')){conclusion+='钙不仅关乎骨骼，还影响神经传导和睡眠质量。';}
+      conclusion+='建议从饮食调整入手，必要时针对性补充。';
+      $('#rSymConclusion').textContent=conclusion;
+    }else{$('#rSymNutrientRank').innerHTML='';$('#rSymConclusion').textContent='所选症状暂无标准营养素映射。';}
+  }else{$('#symptomBlock').style.display='none';}
+
+  const sg=[['睡眠质量',s.sleepScore||0,'/4 越高越好'],['早餐规律',s.breakfastScore||0,'/4 越高越好'],['症状数量',s.symptomCount||0,' 项']];
+  $('#rScores').innerHTML=sg.map(([l,v,u])=>
+    '<div class="score-box"><div class="v">'+v+u+'</div><div class="l">'+l+'</div></div>').join('');
+
+  if(a.deficiencies&&a.deficiencies.length){$('#defBlock').style.display='';
+    $('#rDefs').innerHTML=a.deficiencies.map(d=>'<span class="def-pill">'+d.name+' ('+d.count+')</span>').join('');
+  }else{$('#defBlock').style.display='none';}
+
+  $('#rSug').innerHTML=(a.suggestions||[]).map(s=>'<div class="sug">'+s+'</div>').join('');
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════
+// 事件绑定
+// ══════════════════════════════════════
+$('#submitBtn').addEventListener('click',submit);
+$('#consentChk').addEventListener('change',()=>{const ce=$('#consentErr');if(ce)ce.style.display='none';});
+$('#againBtn').addEventListener('click',()=>{$('#resultView').classList.add('hidden');$('#surveyView').classList.remove('hidden');
+  form().reset();document.querySelectorAll('.opt.on').forEach(o=>o.classList.remove('on'));
+  document.querySelectorAll('.freq-item.on').forEach(o=>o.classList.remove('on'));
+  $('#submitBtn').disabled=false;$('#submitBtn').textContent='提交问卷';window.scrollTo(0,0);});
+$('#againBtn2').addEventListener('click',()=>{$('#successView').classList.add('hidden');$('#surveyView').classList.remove('hidden');
+  form().reset();document.querySelectorAll('.opt.on').forEach(o=>o.classList.remove('on'));
+  document.querySelectorAll('.freq-item.on').forEach(o=>o.classList.remove('on'));
+  $('#submitBtn').disabled=false;$('#submitBtn').textContent='提交问卷';window.scrollTo(0,0);});
+
+$('#saveImgBtn').addEventListener('click',async()=>{
+  const btn=$('#saveImgBtn');const orig=btn.textContent;
+  btn.textContent='生成中…';btn.disabled=true;
+  const rv=$('#resultView');const actions=$('.res-actions');const foot=$('.foot');
+  if(actions)actions.style.visibility='hidden';if(foot)foot.style.visibility='hidden';window.scrollTo(0,0);
+  try{
+    const canvas=await html2canvas(rv,{backgroundColor:'#f5f7fb',scale:2,useCORS:true,logging:false});
+    const a=document.createElement('a');a.href=canvas.toDataURL('image/png');
+    a.download='营养评估_'+new Date().toISOString().slice(0,10)+'.png';
+    document.body.appendChild(a);a.click();a.remove();btn.textContent='已保存 ✓';
+  }catch(e){alert('生成失败：'+e.message);btn.textContent=orig;}
+  finally{if(actions)actions.style.visibility='';if(foot)foot.style.visibility='';
+    setTimeout(()=>{btn.textContent=orig;btn.disabled=false;},1500);}
+});
+
+// ══════════════════════════════════════
+// 页面初始化
+// ══════════════════════════════════════
+renderSurvey();
+
+// ★ 二维码生成（调用云函数 qr）
+(function(){
+  const url=window.location.href;
+  app.callFunction({name:'qr',data:{url:url}}).then(res=>{
+    if(res.result&&res.result.ok){
+      $('#qrImg').src='data:image/png;base64,'+res.result.data;
+    } else {
+      $('#qrImg').alt='二维码生成失败';
+    }
+  }).catch(()=>{$('#qrImg').alt='二维码加载失败';});
+  $('#qrUrl').textContent=url;
+})();
+</script>
+</body>
+</html>
