@@ -1,5 +1,4 @@
-// Cloudflare Pages _worker.js - 代理腾讯云函数
-// 处理 /api/submit 和 /api/qr 请求
+// Cloudflare Pages _worker.js - 代理腾讯云函数（调试版）
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -11,17 +10,7 @@ export default {
 
     const funcName = url.pathname.replace('/api/', '');
 
-    // 尝试多个腾讯云函数调用地址格式
-    const candidates = [
-      // 格式1: 标准云函数公网访问（无 serviceId）
-      'https://cloud1-d7g29ulf838dcd730.ap-shanghai.app.tcloudbase.com/' + funcName,
-      // 格式2: 带完整路径
-      'https://cloud1-d7g29ulf838dcd730-1464246909.ap-shanghai.app.tcloudbase.com/' + funcName,
-      // 格式3: tcb.qcloud.la 域名
-      'https://cloud1-d7g29ulf838dcd730.tcb.qcloud.la/' + funcName,
-    ];
-
-    // 处理 OPTIONS 预检请求
+    // OPTIONS 预检
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
@@ -35,43 +24,45 @@ export default {
 
     const reqBody = request.method === 'POST' ? await request.text() : null;
 
-    // 逐个尝试候选地址
-    for (const targetUrl of candidates) {
-      try {
-        const init = {
-          method: request.method,
-          headers: { 'Content-Type': 'application/json' },
-        };
-        if (reqBody) init.body = reqBody;
+    // 用格式2（带serviceId的那个）——之前测试这个能拿到JSON响应
+    const targetUrl = 'https://cloud1-d7g29ulf838dcd730-1464246909.ap-shanghai.app.tcloudbase.com/' + funcName;
 
-        const resp = await fetch(targetUrl, init);
-        const contentType = resp.headers.get('content-type') || '';
+    try {
+      const init = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      };
+      if (reqBody) init.body = reqBody;
 
-        // 只接受 JSON 响应，跳过 HTML 错误页
-        if (contentType.includes('application/json') || contentType.includes('text/plain')) {
-          const data = await resp.json();
-          return new Response(JSON.stringify(data), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
-            },
-          });
+      const resp = await fetch(targetUrl, init);
+      
+      // 读取原始响应（不管是什么格式）
+      const respText = await resp.text();
+      const contentType = resp.headers.get('content-type') || '';
+
+      // 把腾讯云的原始状态码、内容类型、响应体全部返回，方便调试
+      return new Response(JSON.stringify({
+        _debug: {
+          targetUrl,
+          tcbStatus: resp.status,
+          tcbContentType: contentType,
+          tcbBody: respText.substring(0, 2000), // 截断防止太大
         }
-        // 如果返回 HTML，继续试下一个地址
-      } catch (e) {
-        // 网络错误，继续试下一个
-        continue;
-      }
+      }, null, 2), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ 
+        error: e.message,
+        targetUrl 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
-
-    // 所有地址都失败
-    return new Response(JSON.stringify({ 
-      error: '无法连接到腾讯云函数，请检查函数公网访问是否开启',
-      tried: candidates 
-    }), {
-      status: 502,
-      headers: { 'Content-Type': 'application/json' },
-    });
   },
 };
