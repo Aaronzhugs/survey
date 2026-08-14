@@ -241,12 +241,8 @@
 // ══════════════════════════════════════
 // 初始化云开发
 // ══════════════════════════════════════
-const app = cloudbase.init({
-  env: 'cloud1-d7g29ulf838dcd730',
-  region: 'ap-shanghai'
-});
-// 匿名登录（开启后更稳；未开启也不影响调用 admin 上下文的云函数）
-try { app.auth().signInAnonymously().catch(function(){}); } catch (e) {}
+let app=null;
+try{app=cloudbase.init({env:'cloud1-d7g29ulf838dcd730',region:'ap-shanghai'});app.auth().signInAnonymously().catch(function(){});}catch(e){}
 
 let QUESTIONS = [];
 const $ = (s) => document.querySelector(s);
@@ -399,7 +395,7 @@ async function submit(){
   btn.disabled=true;btn.textContent='分析中…';
   try{
     const answers=collect();
-   
+  
    const res=await fetch('https://survey-proxy.aa8077864.workers.dev/api/submit',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
