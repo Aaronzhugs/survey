@@ -241,8 +241,12 @@
 // ══════════════════════════════════════
 // 初始化云开发
 // ══════════════════════════════════════
-let app=null;
-try{app=cloudbase.init({env:'cloud1-d7g29ulf838dcd730',region:'ap-shanghai'});app.auth().signInAnonymously().catch(function(){});}catch(e){}
+const app = cloudbase.init({
+  env: 'cloud1-d7g29ulf838dcd730',
+  region: 'ap-shanghai'
+});
+// 匿名登录（开启后更稳；未开启也不影响调用 admin 上下文的云函数）
+try { app.auth().signInAnonymously().catch(function(){}); } catch (e) {}
 
 let QUESTIONS = [];
 const $ = (s) => document.querySelector(s);
@@ -330,18 +334,21 @@ function renderSurvey() {
       el.addEventListener('click',(e)=>{e.preventDefault();el.classList.toggle('on');});
       wrap.appendChild(el);
     } else {
-      if (q.id === 'waterBrand'){ wrap.style.display='none'; wrap.id='waterBrandWrap'; }
-      if (q.hint){const h=document.createElement('div');h.className='hint';h.textContent=q.hint;wrap.appendChild(h);}
-      (q.options||[]).forEach((opt)=>{
-        const el=document.createElement('label');el.className='opt';el.textContent=opt;
-        el.dataset.id=q.id;el.dataset.val=opt;el.dataset.multi=q.type==='multiple'?'1':'0';
-        el.addEventListener('click',(e)=>{
-          e.preventDefault();
-          if(el.dataset.multi==='1'){el.classList.toggle('on');}
-          else{document.querySelectorAll('.opt[data-id="'+q.id+'"]').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
-        });
-        wrap.appendChild(el);
+    if (q.id === 'waterBrand'){ wrap.style.display='none'; wrap.id='waterBrandWrap'; }
+    if (q.hint){const h=document.createElement('div');h.className='hint';h.textContent=q.hint;wrap.appendChild(h);}
+    (q.options||[]).forEach((opt)=>{
+      const el=document.createElement('label');el.className='opt';el.textContent=opt;
+      el.dataset.id=q.id;el.dataset.val=opt;el.dataset.multi=q.type==='multiple'?'1':'0';
+      el.addEventListener('click',(e)=>{
+        e.preventDefault();
+        if(el.dataset.multi==='1'){el.classList.toggle('on');}
+        else{document.querySelectorAll('.opt[data-id="'+q.id+'"]').forEach(o=>o.classList.remove('on'));el.classList.add('on');
+          /* waterSource 多选联动：点选/取消"家用净水器"时切换第10题可见性 */
+          if(q.id==='waterSource'&&opt==='家用净水器'){setTimeout(function(){var bw=document.getElementById('waterBrandWrap');if(bw)bw.style.display=el.classList.contains('on')?'':'none';},0);}
+        }
       });
+      wrap.appendChild(el);
+    });
     }
     form.appendChild(wrap);
   });
@@ -395,13 +402,17 @@ async function submit(){
   btn.disabled=true;btn.textContent='分析中…';
   try{
     const answers=collect();
-  
-   const res=await fetch('https://survey-proxy.aa8077864.workers.dev/api/submit',{
+    // ★ 走 Cloudflare Worker 代理调用云函数（绕过 CORS）
+    const res=await fetch('https://survey-proxy.aa8077864.workers.dev/api/submit',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({answers,consent:true})
     });
     const data=await res.json();
+    if(!data.ok){$('#err').textContent=data.error||'提交失败';btn.disabled=false;btn.textContent='提交问卷';return;}
+    showSuccess();
+  }catch(e){$('#err').textContent='网络错误：'+(e.message||e.toString()||'请检查网络后重试');btn.disabled=false;btn.textContent='提交问卷';}
+}
 
 function showSuccess(){
   $('#surveyView').classList.add('hidden');$('#resultView').classList.add('hidden');
@@ -508,15 +519,14 @@ $('#saveImgBtn').addEventListener('click',async()=>{
 // ══════════════════════════════════════
 renderSurvey();
 
-// ★ 二维码生成（调用云函数 qr）
+// ★ 二维码生成（走 Cloudflare Worker 代理）
 (function(){
   const url=window.location.href;
- fetch('https://survey-proxy.aa8077864.workers.dev/api/qr',{
+  fetch('https://survey-proxy.aa8077864.workers.dev/api/qr',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({url:url})
   }).then(res=>res.json()).then(data=>{
-
     if(data&&data.ok){
       $('#qrImg').src='data:image/png;base64,'+data.data;
     } else {
