@@ -399,9 +399,7 @@ async function submit(){
   btn.disabled=true;btn.textContent='分析中…';
   try{
     const answers=collect();
-    // ★ 调用云函数 submit（替代原来的 fetch('/api/submit')）
-    const res=await app.callFunction({name:'submit',data:{answers,consent:true}});
-    const data=res.result;
+   
    const res=await fetch('https://survey-proxy.aa8077864.workers.dev/api/submit',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
