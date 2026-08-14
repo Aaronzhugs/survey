@@ -402,8 +402,8 @@ async function submit(){
   btn.disabled=true;btn.textContent='分析中…';
   try{
     const answers=collect();
-    // ★ 走 Cloudflare Worker 代理调用云函数（绕过 CORS）
-    const res=await fetch('https://survey-proxy.aa8077864.workers.dev/api/submit',{
+    // ★ 走 Pages Functions 代理调用云函数（同域名，无 CORS）
+    const res=await fetch('/api/submit',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({answers,consent:true})
@@ -522,7 +522,7 @@ renderSurvey();
 // ★ 二维码生成（走 Cloudflare Worker 代理）
 (function(){
   const url=window.location.href;
-  fetch('https://survey-proxy.aa8077864.workers.dev/api/qr',{
+  fetch('/api/qr',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({url:url})
