@@ -402,10 +402,12 @@ async function submit(){
     // ★ 调用云函数 submit（替代原来的 fetch('/api/submit')）
     const res=await app.callFunction({name:'submit',data:{answers,consent:true}});
     const data=res.result;
-    if(!data.ok){$('#err').textContent=data.error||'提交失败';btn.disabled=false;btn.textContent='提交问卷';return;}
-    showSuccess();
-  }catch(e){$('#err').textContent='网络错误：'+e.message;btn.disabled=false;btn.textContent='提交问卷';}
-}
+   const res=await fetch('https://survey-proxy.aa8077864.workers.dev/api/submit',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({answers,consent:true})
+    });
+    const data=await res.json();
 
 function showSuccess(){
   $('#surveyView').classList.add('hidden');$('#resultView').classList.add('hidden');
@@ -515,9 +517,14 @@ renderSurvey();
 // ★ 二维码生成（调用云函数 qr）
 (function(){
   const url=window.location.href;
-  app.callFunction({name:'qr',data:{url:url}}).then(res=>{
-    if(res.result&&res.result.ok){
-      $('#qrImg').src='data:image/png;base64,'+res.result.data;
+ fetch('https://survey-proxy.aa8077864.workers.dev/api/qr',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url:url})
+  }).then(res=>res.json()).then(data=>{
+
+    if(data&&data.ok){
+      $('#qrImg').src='data:image/png;base64,'+data.data;
     } else {
       $('#qrImg').alt='二维码生成失败';
     }
